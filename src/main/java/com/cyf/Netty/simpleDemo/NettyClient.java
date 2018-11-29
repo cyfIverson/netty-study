@@ -1,4 +1,4 @@
-package com.cyf.Netty;
+package com.cyf.Netty.simpleDemo;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -19,7 +19,8 @@ public class NettyClient {
         Bootstrap bootstrap = new Bootstrap();
         NioEventLoopGroup loopGroup = new NioEventLoopGroup();
 
-        bootstrap.group(loopGroup)
+        bootstrap
+                .group(loopGroup)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<Channel>() {
                     @Override

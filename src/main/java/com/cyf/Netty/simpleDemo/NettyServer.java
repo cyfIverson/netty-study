@@ -1,4 +1,4 @@
-package com.cyf.Netty;
+package com.cyf.Netty.simpleDemo;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandlerContext;
