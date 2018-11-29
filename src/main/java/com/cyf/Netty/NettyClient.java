@@ -2,7 +2,6 @@ package com.cyf.Netty;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -25,6 +24,7 @@ public class NettyClient {
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
+                        //对数据编码
                         ch.pipeline().addLast(new StringEncoder());
                     }
                 });
@@ -32,6 +32,7 @@ public class NettyClient {
         Channel channel = bootstrap.connect("127.0.0.1", 8888).channel();
 
         while (true){
+            //向客户端发送数据
             channel.writeAndFlush(new Date() + "-hello netty");
             Thread.sleep(2000);
         }
