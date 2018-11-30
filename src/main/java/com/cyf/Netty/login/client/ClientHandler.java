@@ -41,7 +41,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
             if (loginResponsePacket.isSuccess()){
                 System.out.println("登录成功");
             }else {
-                System.out.println("登录失败");
+                System.out.println("登录失败:"+loginResponsePacket.getMessage());
             }
         }
     }

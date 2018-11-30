@@ -23,8 +23,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter{
         //登录过程处理
         if (packet instanceof LoginRequestPacket){
             LoginRequestPacket loginRequestPacket = (LoginRequestPacket)packet;
-
             LoginResponsePacket loginResponsePacket = new LoginResponsePacket();
+
             loginResponsePacket.setVersion(packet.getVersion());
             if (valid(loginRequestPacket)){
                 loginResponsePacket.setSuccess(true);
@@ -34,10 +34,28 @@ public class ServerHandler extends ChannelInboundHandlerAdapter{
                 loginResponsePacket.setSuccess(false);
                 loginResponsePacket.setMessage("账号或密码错误");
             }
+
             //登录响应
             ByteBuf responseByteBuf = PacketCodeC.INSTANCE.encode(loginResponsePacket);
             ctx.channel().writeAndFlush(responseByteBuf);
         }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        super.channelActive(ctx);
+    }
+
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        System.out.println("连接断开");
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
     }
 
     /**

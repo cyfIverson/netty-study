@@ -1,6 +1,7 @@
 package com.cyf.Netty.login.protocol.command;
 
 import com.cyf.Netty.login.protocol.request.LoginRequestPacket;
+import com.cyf.Netty.login.protocol.response.LoginResponsePacket;
 import com.cyf.Netty.login.serializer.impl.JSONSerializer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -9,6 +10,7 @@ import com.cyf.Netty.login.serializer.Serializer;
 import java.util.HashMap;
 import java.util.Map;
 import static com.cyf.Netty.login.protocol.command.Command.LOGIN_REQUEST;
+import static com.cyf.Netty.login.protocol.command.Command.LOGIN_RESPONSE;
 
 
 /**
@@ -26,6 +28,7 @@ public class PacketCodeC {
     static {
         packetTypeMap = new HashMap<>();
         packetTypeMap.put(LOGIN_REQUEST, LoginRequestPacket.class);
+        packetTypeMap.put(LOGIN_RESPONSE, LoginResponsePacket.class);
 
         serializerMap = new HashMap<>();
         Serializer serializer = new JSONSerializer();

@@ -1,6 +1,5 @@
 package com.cyf.Netty.login.server;
 
-import com.cyf.Netty.communication.server.FirstServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
