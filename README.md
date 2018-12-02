@@ -41,9 +41,9 @@ workGroup主要负责每一条连接数据的读写<br>
 
 
 <h5>使用netty开发webSocket简单聊天室</h5>
-**实战介绍** <br>
-1. 创建一个springBoot项目，在启动springBoot项目时去启动netty服务
-2. 构建netty服务，实现代码如下：
+**实战介绍**<br>
+1. 创建一个springBoot项目，在启动springBoot项目时去启动netty服务<br>
+2. 构建netty服务，引导类具体实现代码如下：
 
 ```
  /** boos线程组 */
@@ -80,7 +80,7 @@ workGroup主要负责每一条连接数据的读写<br>
         return serverBootstrap;
     }
 ```
-关于websocket聊天服务的ChannelHandler
+关于websocket聊天服务的ChannelHandler介绍
 - HttpServerCodec：将字节解码为 HttpRequest 、 HttpContent 和 LastHttp-
 Content 。并将 HttpRequest 、 HttpContent 和 Last-
 HttpContent 编码为字节
