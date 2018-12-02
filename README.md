@@ -41,7 +41,7 @@ workGroup主要负责每一条连接数据的读写<br>
 
 
 <h5>使用netty开发webSocket简单聊天室</h5>
-**实战介绍**<br>
+**实战介绍** <br>
 1. 创建一个springBoot项目，在启动springBoot项目时去启动netty服务
 2. 构建netty服务，实现代码如下：
 
