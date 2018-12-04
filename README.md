@@ -148,7 +148,36 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
 - handlerAdded()方法实现浏览器每个页面建立一个连接就将该连接的channel放入channelGroup中
 - handlerRemoved()方法实现当通道断开时，将该channel从channelGroup中删除
 
+##### 传输
+前面已经写了很多实例，但是对于Netty的组件源码熟悉程度还是不够，今天了解了些，并记录下来：
+###### 传输 API
+传输 API 的核心是 interface Channel，它被用于所有的 I/O 操作。Channel 类的层次如图所示：
 
+![image](https://note.youdao.com/yws/public/resource/96c07656581945051d7fc3c65b69942d/xmlnote/7EA7F72430A5491F9EC04147DE328205/7545)
+- 每个 Channel 都将会被分配一个 ChannelPipeline 和 ChannelConfig
+- 由于 Channel 是独一无二的，所以为了保证顺序将 Channel 声明为 java.lang.
+Comparable 的一个子接口
+
+ChannelPipeline 持有所有将应用于入站和出站数据以及事件的 ChannelHandler 实例，这些 ChannelHandler实现了应用程序用于处理状态变化以及数据处理的逻辑。
+
+ChannelHandler 的典型用途包括：
+1. 将数据从一种格式转换为另一种格式；
+1. 提供异常的通知；
+1. 提供 Channel 变为活动的或者非活动的通知；
+1. 提供当 Channel 注册到 EventLoop 或者从 EventLoop 注销时的通知；
+1. 提供有关用户自定义事件的通知 
+
+
+**Channel 的方法** <br>
+eventLoop：返回分配给 Channel 的 EventLoop<br>
+pipeline：返回分配给 Channel 的 ChannelPipeline<br>
+isActive：如果 Channel 是活动的，则返回 true 。活动的意义可能依赖于底层的传输。例如，一个 Socket 传输一旦连接到了远程节点便是活动的，而一个 Datagram 传输一旦
+被打开便是活动的<br>
+localAddress：返回本地的 SokcetAddress<br>
+remoteAddress：返回远程的 SocketAddress<br>
+write：将数据写到远程节点。这个数据将被传递给 ChannelPipeline ，并且排队直到它被冲刷<br>
+flush：将之前已写的数据冲刷到底层传输，如一个 Socket<br>
+writeAndFlush：一个简便的方法，等同于调用 write() 并接着调用 flush()
 
 
 
