@@ -1,6 +1,10 @@
 <h4>关于netty学习的记录</h4>
 netty官网：https://netty.io/
 
+Netty is an asynchronous event-driven network application framework
+
+---
+
 <h5>用IO实现一个简单的长连接</h5>
 1、客户端每2秒向服务端发送一个消息<br>
 2、服务端通过阻塞的方法监听连接，并接收客户端发送的消息打印到控制台
@@ -178,6 +182,208 @@ remoteAddress：返回远程的 SocketAddress<br>
 write：将数据写到远程节点。这个数据将被传递给 ChannelPipeline ，并且排队直到它被冲刷<br>
 flush：将之前已写的数据冲刷到底层传输，如一个 Socket<br>
 writeAndFlush：一个简便的方法，等同于调用 write() 并接着调用 flush()
+
+
+##### 实现简单的群聊功能[非webSocket]
+在使用Netty支持webScoket实现去聊功能前可以先看看该实例
+
+
+服务实现的逻辑：
+- 在客户端连接时将其Channel存入一个ChannelGroup会自动离开中，覆写handlerAdded()方法
+- 客户端断开连接时，ChannelGroup会自动删除，向各个客户端广播该客户端离开
+- 服务端接收到每一客户端发送来的消息时，服务向所有客户端广播该客户端发送来的消息。[==通过判断区分自己和其他客户端==]
+- exceptionCaught()，捕获异常并关闭通道 
+
+服务实现的代码：
+**NettyChatServ.Class**
+```
+/**
+ * 实现多客户端与服务通信的实例(群聊)
+ * @Author cyfIverson
+ * @Date 2018-12-09
+ */
+public class NettyChatServer {
+
+    public static void main(String[] args) {
+        NioEventLoopGroup boosGroup = new NioEventLoopGroup();
+        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+
+        ServerBootstrap serverBootstrap = new ServerBootstrap();
+        serverBootstrap
+                .group(boosGroup,workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        //编码解码Handler
+                        pipeline.addLast(new DelimiterBasedFrameDecoder(4096, Delimiters.lineDelimiter()));
+                        pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+                        pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+                        //服务端处理Handler
+                        pipeline.addLast(new ChatHandler());
+                    }
+                });
+
+        bind(serverBootstrap,8099);
+    }
+
+    /**
+     * 服务启动绑定端口
+     * @param serverBootstrap 服务启动引导类
+     * @param bindPost 绑定端口号
+     */
+    public static void bind(ServerBootstrap serverBootstrap,int bindPost){
+        serverBootstrap.bind(bindPost).addListener(future -> {
+            if (future.isSuccess()){
+                System.out.println("服务端启动成功");
+            }else{
+                System.out.println("服务端启动失败");
+            }
+        });
+    }
+}
+
+```
+
+**ChatHandler.Class**
+```
+/**
+ * 服务逻辑处理Handler
+ * @Author cyfIverson
+ * @Date 2018-12-09
+ */
+public class ChatHandler extends SimpleChannelInboundHandler<String> {
+
+    //利用netty的ChannelGroup来存储channel
+    private static DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        Channel channel = ctx.channel();
+        //服务广播时，区分当前channel和其他channel的处理
+        /*channelGroup.forEach(channel1 -> {
+            if (channel != channel1){
+                channel1.writeAndFlush(channel.remoteAddress()+"发送消息:"+msg);
+            }else {
+                channel1.writeAndFlush("[自己]发送信息"+msg);
+            }
+        });*/
+        for (Channel ch : channelGroup){
+            if (ch != channel){
+                ch.writeAndFlush(channel.remoteAddress()+"发送消息:"+msg+"\n");
+            }else {
+                ch.writeAndFlush("[自己]发送信息"+msg+"\n");
+            }
+        }
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        channelGroup.writeAndFlush("[服务器]"+channel.remoteAddress()+"加入\n");
+        channelGroup.add(channel);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        channelGroup.writeAndFlush("[服务器]"+channel.remoteAddress()+"离开\n");
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        System.out.println(channel.remoteAddress()+"上线");
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        System.out.println(channel.remoteAddress()+"下线");
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
+    }
+}
+
+```
+
+客户端的逻辑实现：
+- 读取客户端在控制台输入的每行信息发送给你服务端
+- 接收服务端发送来的信息打印出来[显示直观效果]
+
+
+**NettyChatClient.Class**
+
+```
+/**
+ * 向服务端发送消息客户端
+ * @Author cyfIverson
+ * @Date 2018-12-09
+ */
+public class NettyChatClient {
+
+    public static void main(String[] args) throws Exception {
+        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap
+                .group(eventLoopGroup)
+                .channel(NioSocketChannel.class)
+                .handler(new ChannelInitializer<NioSocketChannel>() {
+                    @Override
+                    protected void initChannel(NioSocketChannel ch) {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        //编码解码Handler
+                        pipeline.addLast(new DelimiterBasedFrameDecoder(4096, Delimiters.lineDelimiter()));
+                        pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+                        pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+                        //服务端处理Handler
+                        pipeline.addLast(new ChatClientHandler());
+                    }
+                });
+
+        Channel channel = bootstrap.connect("localhost", 8099).sync().channel();
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+        for(;;){
+            channel.writeAndFlush(bufferedReader.readLine()+"\r\n");
+        }
+    }
+}
+```
+
+**ChatClientHandler.Class**
+```
+/**
+ * @Author cyfIverson
+ * @Date 2018-12-09
+ */
+public class ChatClientHandler extends SimpleChannelInboundHandler<String> {
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        System.out.println(msg);
+    }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
