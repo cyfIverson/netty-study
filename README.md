@@ -374,6 +374,106 @@ public class ChatClientHandler extends SimpleChannelInboundHandler<String> {
 ```
 
 
+#### IdleStateHandler心跳机制
+##### 心跳机制
+netty中提供了IdleStateHandler的代码实现来判断客户端与服务端在指定事件内有没有读写请求。<br>
+首先看下IdleStateHandler的构造函数代码实现
+
+```
+public IdleStateHandler(boolean observeOutput,
+            long readerIdleTime, long writerIdleTime, long allIdleTime,
+            TimeUnit unit) {
+        if (unit == null) {
+            throw new NullPointerException("unit");
+        }
+
+        this.observeOutput = observeOutput;
+
+        if (readerIdleTime <= 0) {
+            readerIdleTimeNanos = 0;
+        } else {
+            readerIdleTimeNanos = Math.max(unit.toNanos(readerIdleTime), MIN_TIMEOUT_NANOS);
+        }
+        if (writerIdleTime <= 0) {
+            writerIdleTimeNanos = 0;
+        } else {
+            writerIdleTimeNanos = Math.max(unit.toNanos(writerIdleTime), MIN_TIMEOUT_NANOS);
+        }
+        if (allIdleTime <= 0) {
+            allIdleTimeNanos = 0;
+        } else {
+            allIdleTimeNanos = Math.max(unit.toNanos(allIdleTime), MIN_TIMEOUT_NANOS);
+        }
+    }
+```
+构造函数的参数：
+- readerIdleTime：读空闲时间，指的是在这段时间内如果没有数据读到，就表示连接假死
+- writerIdleTime：第二个是写空闲时间，指的是 在这段时间如果没有写数据，就表示连接假死
+- allIdleTime：第三个参数是读写空闲时间，表示在这段时间内如果没有产生数据读或者写，就表示连接假死
+- unit：最后一个参数表示时间单位
+- 写空闲和读写空闲为0，表示我们不关心者两类条件
+
+
+写个简单的例子测试下：
+服务端实现：
+
+```
+            ......
+            .childHandler(new ChannelInitializer<SocketChannel>() {
+
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast(new IdleStateHandler(5,7,10, TimeUnit.SECONDS));
+
+                        pipeline.addLast(new ServerHandler());
+                    }
+                });
+            ......
+
+```
+LoggingHandler: netty中日志打印的处理器
+
+自定义处理逻辑：
+继承ChannelInboundHandlerAdapter，覆写userEventTriggered()方法
+
+```
+/**
+ *
+ * 服务端处理
+ * @Author cyfIverson
+ * @Date 2018-12-11
+ */
+public class ServerHandler extends ChannelInboundHandlerAdapter {
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof IdleStateEvent){
+            IdleStateEvent event = (IdleStateEvent) evt;
+
+            String eventType = null;
+            switch (event.state()){
+                case READER_IDLE:
+                    eventType = "读空闲";
+                    break;
+                case WRITER_IDLE:
+                    eventType = "写空闲";
+                    break;
+                case ALL_IDLE:
+                    eventType = "读写空闲";
+                    break;
+            }
+
+            System.out.println(ctx.channel().remoteAddress()+"超时事件："+eventType);
+            ctx.channel().close();
+        }
+    }
+}
+
+```
+
+服务端处理好之后，可以启动客户端测试该几种情况。
+
 
 
 
